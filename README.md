@@ -1,0 +1,1 @@
+# aws-lambda-spot-stop-response
