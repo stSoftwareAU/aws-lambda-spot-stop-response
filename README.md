@@ -1,4 +1,5 @@
-# aws-lambda-spot-stop-response
+# Monitor for spot termination and take actions immediately to prevent web server outage. 
+
 Handles spot instance termination.
 The spot termination script will monitor for spot termination notice. 
 
