@@ -96,7 +96,7 @@ monitor() {
 
 init $@
 
-if [ $mode == "test"]; then
+if [ "$mode" == "test" ]; then
 	notified
 fi
 
