@@ -7,6 +7,7 @@ When notified that this instance will be terminated the following actions will b
 2. Make sure the autoscale group requests at least one server be on demand.
 3. When there are other healthy servers in this target group remove this server from the target group.
 
+## User Data
 ```bash
 #!/bin/bash
 
