@@ -6,3 +6,6 @@ When notified that this instance will be terminated the following actions will b
 1. increase the minimum ( starting another)
 2. Make sure the autoscale group requests at least one server be on demand.
 3. When there are other healthy servers in this target group remove this server from the target group.
+
+>
+curl http://domain/path/to/script.sh | bash -s arg1 arg2
