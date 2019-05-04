@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
+mode="monitor"
+
 init() {
+	while true; do
+	  case "$1" in
+	    --test ) mode="test"; shift ;;
+
+	    * ) break ;;
+	  esac
+	done
+
 	identityJSON=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`
 
 	instanceId=$( jq -r '.instanceId'<<<${identityJSON} )
@@ -19,7 +29,7 @@ init() {
 notified() {
 	set -x			# activate debugging from here
 
-	# OK We have << 2 minutes to complete all the work. 
+	# OK We have << 2 minutes to complete all the work.
 	# Start coping the logs in the background.
 	echo "shutting down" |tee /var/log/ec2-user/shut_down.txt
 
@@ -28,27 +38,28 @@ notified() {
 	launchConfigurationName=$( jq -r '.AutoScalingGroups[0].LaunchConfigurationName'<<<${asJSON} )
 	costlyConfigurationName="${launchConfigurationName/\#spot/#costly}";
 	if [[ "$launchConfigurationName" != "$costlyConfigurationName" ]]; then
-		aws autoscaling update-auto-scaling-group --auto-scaling-group-name $asName \
-	--launch-configuration-name $costlyConfigurationName 
+		aws autoscaling update-auto-scaling-group \
+		  --auto-scaling-group-name $asName \
+	    --launch-configuration-name $costlyConfigurationName
 
 		if [[ $asName =~ .*-web ]]; then
-	minSize=$( jq -r '.AutoScalingGroups[0].MinSize'<<<${asJSON} );
-	if [[ $minSize < 2 ]]; then
-	desiredCapacity=$( jq -r '.AutoScalingGroups[0].DesiredCapacity'<<<${asJSON} );
+			minSize=$( jq -r '.AutoScalingGroups[0].MinSize'<<<${asJSON} );
+			if [[ $minSize < 2 ]]; then
+			desiredCapacity=$( jq -r '.AutoScalingGroups[0].DesiredCapacity'<<<${asJSON} );
 
-	maxSize=$( jq -r '.AutoScalingGroups[0].MaxSize'<<<${asJSON} );
-	increaseCapacity=$(($desiredCapacity + 1))
-	if [[ $increaseCapacity > $maxSize ]]; then
-		increaseCapacity=$maxSize;
-	fi
+			maxSize=$( jq -r '.AutoScalingGroups[0].MaxSize'<<<${asJSON} );
+			increaseCapacity=$(($desiredCapacity + 1))
+			if [[ $increaseCapacity > $maxSize ]]; then
+				increaseCapacity=$maxSize;
+			fi
 
-	if [[ $increaseCapacity < $minSize ]]; then
-		increaseCapacity=$minSize;
-	fi
-	aws autoscaling update-auto-scaling-group --auto-scaling-group-name $asName \
-			--desired-capacity $increaseCapacity \
-			--min-size $increaseCapacity
-	fi
+			if [[ $increaseCapacity < $minSize ]]; then
+				increaseCapacity=$minSize;
+			fi
+			aws autoscaling update-auto-scaling-group --auto-scaling-group-name $asName \
+					--desired-capacity $increaseCapacity \
+					--min-size $increaseCapacity
+			fi
 		fi
 	fi
 
@@ -62,14 +73,14 @@ notified() {
 	echo "$launchConfigurationName -> $costlyConfigurationName" |mailx \
 		-a /var/log/ec2-user/termination_notice.log \
 		-a /var/log/ec2-user/spot-termination.json \
-		-s "Spot $ID terminated for $asName" support@stsoftware.com.au	
+		-s "Spot $ID terminated for $asName" support@stsoftware.com.au
 
 	exit
 }
 
 monitor() {
 
-	#Don't stop no matter what ( we will not be restarted). 
+	#Don't stop no matter what ( we will not be restarted).
 	set +e
 	while true
 	do
@@ -83,5 +94,10 @@ monitor() {
 	done
 }
 
-init
+init $@
+
+if [ $mode == "test"]; then
+	notified
+fi
+
 main
