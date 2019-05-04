@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
-ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
 
-instanceJSON=`aws ec2 describe-instances --instance-ids $ID`
+identityJSON=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`
+
+instanceId=$( jq -r '.instanceId'<<<${identityJSON} )
+region=$( jq -r '.region'<<<${identityJSON} )
+
+instanceJSON=`aws ec2 describe-instances --instance-ids ${instanceId} --region ${region}`
 
 asName=$( jq -r '.Reservations[0].Instances[0].Tags[]| select(.Key == "aws:autoscaling:groupName") .Value'<<<${instanceJSON} )
 
