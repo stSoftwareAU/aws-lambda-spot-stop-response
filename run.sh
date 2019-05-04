@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
 
 instanceJSON=`aws ec2 describe-instances --instance-ids $ID`
@@ -10,6 +11,8 @@ if [[ -z $asName ]]; then
    exit 1;
 fi
 
+#Don't stop no matter what ( we will not be restarted). 
+set +e
 while true
 do
   res=$(curl -s -o /var/log/ec2-user/spot-termination.json -w '%{http_code}\n' http://169.254.169.254/latest/meta-data/spot/instance-action)
