@@ -1,6 +1,6 @@
 # Web server monitor for spot termination
 
-## To prevent/reduce publically visible web server outages yet allow the use of spot instance this script will monitor for spot termination notication and take actions immediately.
+To prevent/reduce publically visible web server outages yet allow the use of spot instance this script will monitor for spot termination notication and take actions immediately.
 
 When notified that this instance will be terminated the following actions will be performed:-
 1. increase the minimum ( starting another)
