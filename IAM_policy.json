@@ -6,7 +6,8 @@
             "Effect": "Allow",
             "Action": [
                 "autoscaling:DescribeAutoScalingInstances",
-                "ec2:DescribeInstances"
+                "ec2:DescribeInstances",
+                "autoscaling:DescribeAutoScalingGroups"
             ],
             "Resource": "*"
         }
