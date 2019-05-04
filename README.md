@@ -8,7 +8,7 @@ When notified that this instance will be terminated the following actions will b
 3. When there are other healthy servers in this target group remove this server from the target group.
 
 ```bash
-sudo yum install jq 
+sudo yum install jq mailx
 curl https://raw.githubusercontent.com/stSoftwareAU/aws-spot-termination-monitor/master/run.sh --output spot-monitor.sh
 bash -x spot-monitor.sh
 ```
