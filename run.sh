@@ -79,7 +79,8 @@ notified() {
   if [ ! -z "$topicARN" ]; then
     aws sns publish \
       --region ${region} \
-      --topic-arn $topicARN "Spot $ID terminated for $auto_scale_group" \
+      --topic-arn $topicARN \
+      --subject "Spot $ID terminated for $auto_scale_group" \
       --message-structure json \
       --message file:///tmp/spot-termination.json
   fi
