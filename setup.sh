@@ -6,14 +6,16 @@ monitorUser="spot-monitor"
 # Optional: Which topic should we send the notification of the instance is about to be terminated.
 topicARN=""
 
-while [ "$1" != "" ]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
-    --target-arn ) topicARN=$2; shift 2;;
-
+    --topic-arn ) 
+      topicARN=$2
+      shift;;
     * )
-    echo "usage $0 --target-arn ARN "
-    exit 1 ;;
+      echo "Unknown parameter passed: $1"
+      exit 1 ;;
   esac
+  shift
 done
 
 # Install script dependencies jq
