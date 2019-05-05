@@ -26,8 +26,7 @@ cd /home/${monitorUser}
 
 #Set up logs
 logFile="/var/log/${monitorUser}.log"
-sudo touch ${logFile}
-sudo chown ${monitorUser}:${monitorUser} ${logFile}
+touch ${logFile}
 
 #Set up ssh access to github
 sudo mkdir -p .ssh
@@ -38,7 +37,7 @@ sudo chown --recursive ${monitorUser}:${monitorUser} .ssh
 sudo chmod go-rxw,u-x .ssh/*
 
 #Clone the monitor
-sudo -u ${monitorUser} git clone –depth 1 git@github.com:stSoftwareAU/aws-spot-termination-monitor.git monitor
+sudo -u ${monitorUser} git clone --depth 1 https://github.com/stSoftwareAU/aws-spot-termination-monitor.git monitor
 
 # Run the monitor in background
 sudo -u ${monitorUser} monitor/run.sh --topic-arn ${topicARN} > ${logFile} &
