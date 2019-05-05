@@ -8,7 +8,7 @@ init() {
      case "$1" in
        --test)
          mode="test"
-         shift ;;
+         ;;
        --topic-arn)
          topicARN=$2
          shift ;;
@@ -16,8 +16,10 @@ init() {
          echo "Unknown parameter passed: $1"
          exit 1 ;;
      esac
-     shift
-   done
+     if [[ $# -gt 0 ]]; then
+	    shift
+	  fi
+  done
 
   identityJSON=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`
 
