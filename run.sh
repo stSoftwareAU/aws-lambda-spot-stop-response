@@ -4,7 +4,7 @@ mode="monitor"
 topicARN=""
 
 init() {
-	while true; do
+	while [ "$1" != "" ]; do
 	  case "$1" in
 			--test ) mode="test"; shift ;;
 			--target-arn ) topicARN=$2; shift 2;;

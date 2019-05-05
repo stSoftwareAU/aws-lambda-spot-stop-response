@@ -20,6 +20,6 @@ topicARN="arn:aws:sns:ap-southeast-2:0000000000000:test"
 
 # download and setup the spot monitor
 setupURL="https://raw.githubusercontent.com/stSoftwareAU/aws-spot-termination-monitor/master/setup.sh"
-curl -s ${setupURL} | bash -s --target-arn ${topicARN}
-
+curl -s ${setupURL} -o setup.sh
+bash setup.sh --target-arn ${topicARN}
 ```
