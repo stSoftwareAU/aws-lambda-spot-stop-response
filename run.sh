@@ -91,9 +91,8 @@ notified() {
 
   onDemandBaseCapacity=$( jq -r '.AutoScalingGroups[0].MixedInstancesPolicy.OnDemandBaseCapacity'<<<${asJSON} );
   targetOnDemandBaseCapacity=1
-  if [[ $onDemandBaseCapacity > $targetOnDemandBaseCapacity ]]; then
-
-    targetOnDemandBaseCapacity=$onDemandBaseCapacity
+  if [[ ! -z "${onDemandBaseCapacity}" && ${onDemandBaseCapacity} > ${targetOnDemandBaseCapacity} ]]; then
+    targetOnDemandBaseCapacity=${onDemandBaseCapacity}
   fi
 
   if [[ $minSize == 1 && $maxSize > 1 ]]; then
@@ -115,7 +114,7 @@ notified() {
       --region ${region} \
       --desired-capacity $targetDesiredCapacity \
       --min-size $targetMinSize \
-      --mixed-instances-policy "\{\"InstancesDistribution\": \{\"OnDemandBaseCapacity\":${targetOnDemandBaseCapacity}\}\}"
+      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":${targetOnDemandBaseCapacity}}}"
   elif [[ $onDemandBaseCapacity < $targetOnDemandBaseCapacity ]]; then
 
     targetOnDemandBaseCapacity=$onDemandBaseCapacity
@@ -124,7 +123,7 @@ notified() {
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $auto_scale_group \
       --region ${region} \
-      --mixed-instances-policy "\{\"InstancesDistribution\": \{\"OnDemandBaseCapacity\":${targetOnDemandBaseCapacity}\}\}"
+      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":${targetOnDemandBaseCapacity}}}"
   fi
 
   drainInstance
@@ -140,7 +139,7 @@ reset()
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $auto_scale_group \
       --region ${region} \
-      --mixed-instances-policy "\{\"InstancesDistribution\": \{\"OnDemandBaseCapacity\":${resetOnDemandBaseCapacity}\}\}"
+      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":${resetOnDemandBaseCapacity}}}"
   fi
 
   if [ ! -z "$resetMinSize" ]; then
