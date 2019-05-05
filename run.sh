@@ -38,68 +38,65 @@ init() {
 
 notified() {
 
-	# OK We have << 2 minutes to complete all the work.
-	# Start coping the logs in the background.
-	echo "shutting down"
-	if [ -z "$topicARN" ]; then
-		aws sns publish \
-			--topic-arn $topicARN "Spot $ID terminated for $asName" \
-			--message-structure json \
-			--message file:///tmp/spot-termination.json
-	fi
+  # OK We have << 2 minutes to complete all the work.
+  # Start coping the logs in the background.
+  echo "shutting down"
+  if [ -z "$topicARN" ]; then
+    aws sns publish \
+      --region ${region} \
+      --topic-arn $topicARN "Spot $ID terminated for $asName" \
+      --message-structure json \
+      --message file:///tmp/spot-termination.json
+  fi
 
-	asJSON=`aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $asName --region ${region}`
+  asJSON=`aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $asName --region ${region}`
 
-	minSize=$( jq -r '.AutoScalingGroups[0].MinSize'<<<${asJSON} );
-	maxSize=$( jq -r '.AutoScalingGroups[0].MaxSize'<<<${asJSON} );
+  minSize=$( jq -r '.AutoScalingGroups[0].MinSize'<<<${asJSON} );
+  maxSize=$( jq -r '.AutoScalingGroups[0].MaxSize'<<<${asJSON} );
 
-	onDemandBaseCapacity=$( jq -r '.AutoScalingGroups[0].MixedInstancesPolicy.OnDemandBaseCapacity'<<<${asJSON} );
-	targetOnDemandBaseCapacity=1
+  onDemandBaseCapacity=$( jq -r '.AutoScalingGroups[0].MixedInstancesPolicy.OnDemandBaseCapacity'<<<${asJSON} );
+  targetOnDemandBaseCapacity=1
+  if [[ $onDemandBaseCapacity > $targetOnDemandBaseCapacity ]]; then
 
-	if [[ $onDemandBaseCapacity < $targetOnDemandBaseCapacity ]]; then
+    targetOnDemandBaseCapacity=$onDemandBaseCapacity
+  fi 
+    
+  if [[ $minSize == 1 && $maxSize > 1 ]]; then
 
-		targetOnDemandBaseCapacity=$onDemandBaseCapacity
+    desiredCapacity=$( jq -r '.AutoScalingGroups[0].DesiredCapacity'<<<${asJSON} );
 
-		echo "Change onDemandBaseCapacity $onDemandBaseCapacity -> $targetOnDemandBaseCapacity"
-		aws autoscaling update-auto-scaling-group \
-			--auto-scaling-group-name $asName \
-			--region ${region} \
-			--mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$targetOnDemandBaseCapacity}"
-	fi
+    targetMinSize=2
+    targetDesiredCapacity=$desiredCapacity
 
-	if [[ $minSize == 1 && $maxSize > 1 ]]; then
+    if [[ $targetMinSize > $targetDesiredCapacity ]]; then
+      targetDesiredCapacity=$targetMinSize
+      echo "Increase DesiredCapacity $desiredCapacity -> $targetDesiredCapacity"
+    fi
 
-		desiredCapacity=$( jq -r '.AutoScalingGroups[0].DesiredCapacity'<<<${asJSON} );
+    echo "Increase MinSize $minSize -> $targetMinSize"
 
-		targetMinSize=2
-		targetDesiredCapacity=$desiredCapacity
+    aws autoscaling update-auto-scaling-group \
+      --auto-scaling-group-name $asName \
+      --region ${region} \
+      --desired-capacity $targetDesiredCapacity \
+      --min-size $targetMinSize \
+      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$targetOnDemandBaseCapacity}"
+  elif [[ $onDemandBaseCapacity < $targetOnDemandBaseCapacity ]]; then
 
-		if [[ $targetMinSize > $targetDesiredCapacity ]]; then
-			targetDesiredCapacity=$targetMinSize
-			echo "Increase DesiredCapacity $desiredCapacity -> $targetDesiredCapacity"
-		fi
+    targetOnDemandBaseCapacity=$onDemandBaseCapacity
 
-		echo "Increase MinSize $minSize -> $targetMinSize"
-
-		aws autoscaling update-auto-scaling-group \
-	    --auto-scaling-group-name $asName \
-			--region ${region} \
-			--desired-capacity $targetDesiredCapacity \
-			--min-size $targetMinSize
-	fi
-
-
-	# Stop monitoring once notified of termination.
-	bash -x ../drainInstance.sh $ID
-
-	# if we have removed the instance from the load balancer then we need to make sure this this instance actually shuts down.
-	echo "The instance should be terminated in less than 2 minutes but just shutdown in five if this is not the case for some reason"
+    echo "Change onDemandBaseCapacity $onDemandBaseCapacity -> $targetOnDemandBaseCapacity"
+    aws autoscaling update-auto-scaling-group \
+      --auto-scaling-group-name $asName \
+      --region ${region} \
+      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$targetOnDemandBaseCapacity}"
+  fi
 
 
+  # Stop monitoring once notified of termination.
+  bash -x ../drainInstance.sh $ID
 
-	sudo shutdown +5
-
-	exit
+  exit
 }
 
 monitor() {
