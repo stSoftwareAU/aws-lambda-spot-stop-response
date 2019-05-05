@@ -91,7 +91,7 @@ notified() {
 
   onDemandBaseCapacity=$( jq -r '.AutoScalingGroups[0].MixedInstancesPolicy.OnDemandBaseCapacity'<<<${asJSON} );
   targetOnDemandBaseCapacity=1
-  if [[ ! -z "${onDemandBaseCapacity}" && ${onDemandBaseCapacity} > ${targetOnDemandBaseCapacity} ]]; then
+  if [[ "${onDemandBaseCapacity}" =~ ^[1-9][0-9]* ]]; then    
     targetOnDemandBaseCapacity=${onDemandBaseCapacity}
   fi
 
