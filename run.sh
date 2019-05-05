@@ -4,36 +4,34 @@ mode="monitor"
 topicARN=""
 
 init() {
-  while true; do
+  while [[ "$#" -gt 0 ]]; do
      case "$1" in
        --test)
-         mode="test";
+         mode="test"
          shift ;;
-       --target-arn)
-         topicARN=$2;
-         shift 2;;
-       --)  
-         shift
-         break ;;
+       --topic-arn)
+         topicARN=$2
+         shift ;;
        *)
-         echo "usage $0 --test --target-arn ARN "
+         echo "Unknown parameter passed: $1"
          exit 1 ;;
      esac
+     shift
    done
 
-	identityJSON=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`
+  identityJSON=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`
 
-	instanceId=$( jq -r '.instanceId'<<<${identityJSON} )
-	region=$( jq -r '.region'<<<${identityJSON} )
+  instanceId=$( jq -r '.instanceId'<<<${identityJSON} )
+  region=$( jq -r '.region'<<<${identityJSON} )
 
-	instanceJSON=`aws ec2 describe-instances --instance-ids ${instanceId} --region ${region}`
+  instanceJSON=`aws ec2 describe-instances --instance-ids ${instanceId} --region ${region}`
 
-	asName=$( jq -r '.Reservations[0].Instances[0].Tags[]| select(.Key == "aws:autoscaling:groupName") .Value'<<<${instanceJSON} )
+  asName=$( jq -r '.Reservations[0].Instances[0].Tags[]| select(.Key == "aws:autoscaling:groupName") .Value'<<<${instanceJSON} )
 
-	if [[ -z $asName ]]; then
-	   echo "no autoscale groupd for: $ID"
-	   exit 1;
-	fi
+  if [[ -z $asName ]]; then
+     echo "no autoscale groupd for: $ID"
+     exit 1;
+  fi
 }
 
 notified() {
