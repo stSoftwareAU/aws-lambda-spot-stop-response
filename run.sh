@@ -76,7 +76,7 @@ notified() {
   # OK We have << 2 minutes to complete all the work.
   # Start coping the logs in the background.
   echo "shutting down"
-  if [ -z "$topicARN" ]; then
+  if [ ! -z "$topicARN" ]; then
     aws sns publish \
       --region ${region} \
       --topic-arn $topicARN "Spot $ID terminated for $auto_scale_group" \
@@ -115,7 +115,7 @@ notified() {
       --region ${region} \
       --desired-capacity $targetDesiredCapacity \
       --min-size $targetMinSize \
-      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$targetOnDemandBaseCapacity}}"
+      --mixed-instances-policy "\{\"InstancesDistribution\": \{\"OnDemandBaseCapacity\":${targetOnDemandBaseCapacity}\}\}"
   elif [[ $onDemandBaseCapacity < $targetOnDemandBaseCapacity ]]; then
 
     targetOnDemandBaseCapacity=$onDemandBaseCapacity
@@ -124,7 +124,7 @@ notified() {
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $auto_scale_group \
       --region ${region} \
-      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$targetOnDemandBaseCapacity}}"
+      --mixed-instances-policy "\{\"InstancesDistribution\": \{\"OnDemandBaseCapacity\":${targetOnDemandBaseCapacity}\}\}"
   fi
 
   drainInstance
@@ -140,7 +140,7 @@ reset()
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $auto_scale_group \
       --region ${region} \
-      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$resetOnDemandBaseCapacity}}"
+      --mixed-instances-policy "\{\"InstancesDistribution\": \{\"OnDemandBaseCapacity\":${resetOnDemandBaseCapacity}\}\}"
   fi
 
   if [ ! -z "$resetMinSize" ]; then
