@@ -1,15 +1,17 @@
 #!/bin/bash
 set -e
 mode="monitor"
-email=""
+topicARN=""
 
 init() {
 	while true; do
 	  case "$1" in
 			--test ) mode="test"; shift ;;
-			--email ) email=$2; shift 2;;
+			--target-arn ) topicARN=$2; shift 2;;
 
-	    * ) break ;;
+	    * )
+			echo "usage $0 --test --target-arn ARN "
+			exit 1 ;;
 	  esac
 	done
 
@@ -33,6 +35,12 @@ notified() {
 	# OK We have << 2 minutes to complete all the work.
 	# Start coping the logs in the background.
 	echo "shutting down"
+	if [ -z "$topicARN" ]; then
+		aws sns publish \
+			--topic-arn $topicARN "Spot $ID terminated for $asName" \
+			--message-structure json \
+			--message file:///tmp/spot-termination.json
+	fi
 
 	asJSON=`aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $asName --region ${region}`
 
@@ -74,49 +82,16 @@ notified() {
 			--min-size $targetMinSize
 	fi
 
-	launchConfigurationName=$( jq -r '.AutoScalingGroups[0].LaunchConfigurationName'<<<${asJSON} )
-	costlyConfigurationName="${launchConfigurationName/\#spot/#costly}";
-	if [[ "$launchConfigurationName" != "$costlyConfigurationName" ]]; then
-		aws autoscaling update-auto-scaling-group \
-		  --auto-scaling-group-name $asName \
-	    --launch-configuration-name $costlyConfigurationName
-
-		if [[ $asName =~ .*-web ]]; then
-			minSize=$( jq -r '.AutoScalingGroups[0].MinSize'<<<${asJSON} );
-			if [[ $minSize < 2 ]]; then
-			desiredCapacity=$( jq -r '.AutoScalingGroups[0].DesiredCapacity'<<<${asJSON} );
-
-			maxSize=$( jq -r '.AutoScalingGroups[0].MaxSize'<<<${asJSON} );
-			increaseCapacity=$(($desiredCapacity + 1))
-			if [[ $increaseCapacity > $maxSize ]]; then
-				increaseCapacity=$maxSize;
-			fi
-
-			if [[ $increaseCapacity < $minSize ]]; then
-				increaseCapacity=$minSize;
-			fi
-			aws autoscaling update-auto-scaling-group --auto-scaling-group-name $asName \
-					--desired-capacity $increaseCapacity \
-					--min-size $increaseCapacity
-			fi
-		fi
-	fi
 
 	# Stop monitoring once notified of termination.
 	bash -x ../drainInstance.sh $ID
 
 	# if we have removed the instance from the load balancer then we need to make sure this this instance actually shuts down.
 	echo "The instance should be terminated in less than 2 minutes but just shutdown in five if this is not the case for some reason"
+
+
+
 	sudo shutdown +5
-
-  if [ -z "$email" ]; then
-
-#			-a /var/log/ec2-user/termination_notice.log \
-
-		echo "$launchConfigurationName -> $costlyConfigurationName" |mailx \
-			-a /tmp/spot-termination.json \
-			-s "Spot $ID terminated for $asName" $email
-	fi
 
 	exit
 }
