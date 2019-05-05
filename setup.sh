@@ -15,7 +15,9 @@ while [[ $# -gt 0 ]]; do
       echo "Unknown parameter passed: $1"
       exit 1 ;;
   esac
-  shift
+  if [[ $# -gt 0 ]]; then
+    shift
+  fi
 done
 
 # Install script dependencies jq
