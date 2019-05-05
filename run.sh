@@ -4,16 +4,22 @@ mode="monitor"
 topicARN=""
 
 init() {
-	while [ "$1" != "" ]; do
-	  case "$1" in
-			--test ) mode="test"; shift ;;
-			--target-arn ) topicARN=$2; shift 2;;
-
-	    * )
-			echo "usage $0 --test --target-arn ARN "
-			exit 1 ;;
-	  esac
-	done
+  while true; do
+     case "$1" in
+       --test)
+         mode="test";
+         shift ;;
+       --target-arn)
+         topicARN=$2;
+         shift 2;;
+       --)  
+         shift
+         break ;;
+       *)
+         echo "usage $0 --test --target-arn ARN "
+         exit 1 ;;
+     esac
+   done
 
 	identityJSON=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document`
 
