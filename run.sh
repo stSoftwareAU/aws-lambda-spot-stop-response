@@ -2,12 +2,22 @@
 set -e
 mode="monitor"
 topicARN=""
+resetMinSize=""
+resetOnDemandBaseCapacity=""
 
 init() {
   while [[ "$#" -gt 0 ]]; do
      case "$1" in
        --test)
          mode="test"
+         ;;
+       --reset-min-size)
+         resetMinSize=$2
+         shift
+         ;;
+       --reset-on-demand-base-capacity)
+         resetOnDemandBaseCapacity=$2
+         shift
          ;;
        --topic-arn)
          topicARN=$2
@@ -28,12 +38,37 @@ init() {
 
   instanceJSON=`aws ec2 describe-instances --instance-ids ${instanceId} --region ${region}`
 
-  asName=$( jq -r '.Reservations[0].Instances[0].Tags[]| select(.Key == "aws:autoscaling:groupName") .Value'<<<${instanceJSON} )
+  auto_scale_group=$( jq -r '.Reservations[0].Instances[0].Tags[]| select(.Key == "aws:autoscaling:groupName") .Value'<<<${instanceJSON} )
 
-  if [[ -z $asName ]]; then
+  if [[ -z $auto_scale_group ]]; then
      echo "no autoscale groupd for: $ID"
      exit 1;
   fi
+}
+
+drainInstance() {
+	main() {
+    target_groups_json=`aws autoscaling describe-load-balancer-target-groups \
+      --region ${region} \
+      --auto-scaling-group-name "${auto_scale_group}"`
+
+    target_groups=$(jq -r '.LoadBalancerTargetGroups[] | .LoadBalancerTargetGroupARN'<<<"${target_groups_json}")
+
+    #De-register this instance from each target group
+    for target_group_arn in "${target_groups}"; do
+        targets_json=$( \
+          aws elbv2 describe-target-health \
+            --region ${region} \
+            --target-group-arn "${target_group_arn}" \
+        )
+        number_of_healthy_targets=$(jq '[.TargetHealthDescriptions[] | select(.TargetHealth.State == "healthy")] | length' <<< "${targets_json}")
+        if [ $number_of_healthy_targets -gt 1 ] ]; then
+            aws elbv2 deregister-targets \
+              --region ${region} \
+              --target-group-arn "${target_group_arn}" \
+              --targets Id="${instance_ID}"
+        fi
+    done
 }
 
 notified() {
@@ -44,12 +79,12 @@ notified() {
   if [ -z "$topicARN" ]; then
     aws sns publish \
       --region ${region} \
-      --topic-arn $topicARN "Spot $ID terminated for $asName" \
+      --topic-arn $topicARN "Spot $ID terminated for $auto_scale_group" \
       --message-structure json \
       --message file:///tmp/spot-termination.json
   fi
 
-  asJSON=`aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $asName --region ${region}`
+  asJSON=`aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name $auto_scale_group --region ${region}`
 
   minSize=$( jq -r '.AutoScalingGroups[0].MinSize'<<<${asJSON} );
   maxSize=$( jq -r '.AutoScalingGroups[0].MaxSize'<<<${asJSON} );
@@ -59,8 +94,8 @@ notified() {
   if [[ $onDemandBaseCapacity > $targetOnDemandBaseCapacity ]]; then
 
     targetOnDemandBaseCapacity=$onDemandBaseCapacity
-  fi 
-    
+  fi
+
   if [[ $minSize == 1 && $maxSize > 1 ]]; then
 
     desiredCapacity=$( jq -r '.AutoScalingGroups[0].DesiredCapacity'<<<${asJSON} );
@@ -76,7 +111,7 @@ notified() {
     echo "Increase MinSize $minSize -> $targetMinSize"
 
     aws autoscaling update-auto-scaling-group \
-      --auto-scaling-group-name $asName \
+      --auto-scaling-group-name $auto_scale_group \
       --region ${region} \
       --desired-capacity $targetDesiredCapacity \
       --min-size $targetMinSize \
@@ -87,16 +122,33 @@ notified() {
 
     echo "Change onDemandBaseCapacity $onDemandBaseCapacity -> $targetOnDemandBaseCapacity"
     aws autoscaling update-auto-scaling-group \
-      --auto-scaling-group-name $asName \
+      --auto-scaling-group-name $auto_scale_group \
       --region ${region} \
       --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$targetOnDemandBaseCapacity}"
   fi
 
+  drainInstance
 
   # Stop monitoring once notified of termination.
-  bash -x ../drainInstance.sh $ID
-
   exit
+}
+
+# Reset the min and on demand capacity on successful start of a new server.
+reset()
+{
+  if [ ! -z "$resetOnDemandBaseCapacity" ]; then
+    aws autoscaling update-auto-scaling-group \
+      --auto-scaling-group-name $auto_scale_group \
+      --region ${region} \
+      --mixed-instances-policy "{\"InstancesDistribution\": {\"OnDemandBaseCapacity\":$resetOnDemandBaseCapacity}"
+  fi
+
+  if [ ! -z "$resetMinSize" ]; then
+    aws autoscaling update-auto-scaling-group \
+      --auto-scaling-group-name $auto_scale_group \
+      --region ${region} \
+      --min-size $resetMinSize
+  fi
 }
 
 monitor() {
@@ -122,5 +174,7 @@ if [ "$mode" == "test" ]; then
 
 	notified
 fi
+
+reset
 
 monitor

@@ -11,7 +11,9 @@ When notified that this instance will be terminated the following actions will b
 ## User Data
 ```bash
 #!/bin/bash
+#
 # Install/Start a web server ( obviously replaced by your real web application)
+# Only here as an example.
 yum install -y httpd
 /bin/systemctl start httpd.service
 
@@ -21,5 +23,5 @@ topicARN="arn:aws:sns:ap-southeast-2:0000000000000:test"
 # download and setup the spot monitor
 setupURL="https://raw.githubusercontent.com/stSoftwareAU/aws-spot-termination-monitor/master/setup.sh"
 curl -s ${setupURL} -o setup.sh
-bash setup.sh --target-arn ${topicARN}
+bash setup.sh --topic-arn ${topicARN} --reset-min-size 1 --reset-on-demand-base-capacity 0
 ```
