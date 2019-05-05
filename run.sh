@@ -47,7 +47,7 @@ init() {
 }
 
 drainInstance() {
-	main() {
+
     target_groups_json=`aws autoscaling describe-load-balancer-target-groups \
       --region ${region} \
       --auto-scaling-group-name "${auto_scale_group}"`
