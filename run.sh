@@ -62,7 +62,7 @@ drainInstance() {
             --target-group-arn "${target_group_arn}" \
         )
         number_of_healthy_targets=$(jq '[.TargetHealthDescriptions[] | select(.TargetHealth.State == "healthy")] | length' <<< "${targets_json}")
-        if [ $number_of_healthy_targets -gt 1 ] ]; then
+        if [ $number_of_healthy_targets -gt 1 ]; then
             aws elbv2 deregister-targets \
               --region ${region} \
               --target-group-arn "${target_group_arn}" \
@@ -91,7 +91,7 @@ notified() {
 
   onDemandBaseCapacity=$( jq -r '.AutoScalingGroups[0].MixedInstancesPolicy.OnDemandBaseCapacity'<<<${asJSON} );
   targetOnDemandBaseCapacity=1
-  if [[ "${onDemandBaseCapacity}" =~ ^[1-9][0-9]* ]]; then    
+  if [[ "${onDemandBaseCapacity}" =~ ^[1-9][0-9]* ]]; then
     targetOnDemandBaseCapacity=${onDemandBaseCapacity}
   fi
 

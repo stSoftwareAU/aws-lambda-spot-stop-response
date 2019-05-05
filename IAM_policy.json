@@ -7,7 +7,9 @@
       "autoscaling:DescribeAutoScalingInstances",
       "ec2:DescribeInstances",
       "sns:Publish",
+      "autoscaling:DescribeLoadBalancerTargetGroups"
       "autoscaling:DescribeAutoScalingGroups",
+      "elasticloadbalancing:DescribeTargetHealth"
       "autoscaling:UpdateAutoScalingGroup"
     ],
     "Resource": "*"
