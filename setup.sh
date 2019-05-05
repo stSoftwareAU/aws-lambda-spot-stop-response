@@ -12,12 +12,6 @@ useradd ${monitorUser}
 chmod ugo+xr /home/${monitorUser}
 cd /home/${monitorUser}
 
-#Set up ssh access to github
-mkdir -p .ssh
-ssh-keyscan github.com > .ssh/known_hosts
-chown --recursive ${monitorUser}:${monitorUser} .ssh
-chmod go-rxw,u-x .ssh/*
-
 #Clone the monitor
 sudo -u ${monitorUser} git clone --depth 1 https://github.com/stSoftwareAU/aws-spot-termination-monitor.git monitor
 
