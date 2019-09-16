@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 mode="monitor"
 topicARN=""
 resetMinSize=""
