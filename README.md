@@ -25,3 +25,23 @@ setupURL="https://raw.githubusercontent.com/stSoftwareAU/aws-spot-termination-mo
 curl -s ${setupURL} -o setup.sh
 bash setup.sh --topic-arn ${topicARN} --reset-min-size 1 --reset-on-demand-base-capacity 0
 ```
+
+## IAM Role Permissions for this monitor
+```{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "sns:Publish",
+                "ec2:DescribeInstances",
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:UpdateAutoScalingGroup",
+                "autoscaling:DescribeLoadBalancerTargetGroups"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
