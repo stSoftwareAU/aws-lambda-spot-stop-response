@@ -27,7 +27,7 @@ bash setup.sh --topic-arn ${topicARN} --reset-min-size 1 --reset-on-demand-base-
 ```
 
 ## IAM Role Permissions for this monitor
-```
+```JSON
 {
     "Version": "2012-10-17",
     "Statement": [
